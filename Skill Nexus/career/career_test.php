@@ -30,7 +30,7 @@ include __DIR__ . '/../config.php';
                         guidance will be.</li>
                 </ul>
                 <div class="mt-4">
-                    <a href="<?= $base_path ?>tets.php" class="btn btn-success btn-lg">Start the Career Test</a>
+                    <a href="test.php" class="btn btn-success btn-lg">Start the Career Test</a>
                 </div>
             </div>
         </div>

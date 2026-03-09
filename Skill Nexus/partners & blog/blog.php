@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config.php';   // fixed path
 // blog.php
 $posts = [
     [

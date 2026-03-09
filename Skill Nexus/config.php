@@ -1,5 +1,6 @@
 <?php
 define('BASE_PATH', __DIR__);
+define('BASE_URL', '/skill_nexus/Skill nexus');
 
 try {
     $dsn = "mysql:host=localhost;dbname=career_guidance;charset=utf8mb4";
@@ -30,16 +31,16 @@ try {
     <nav class="navbar fixed-top bg-body-tertiary">
         <nav class="navbar bg-body-tertiary">
             <div class="container-fluid">
-                <a class="navbar-brand" href="#">
+                <a class="navbar-brand" href="<?php echo BASE_URL; ?>/index_.php">
                     <img src="/docs/5.3/assets/brand/bootstrap-logo.svg" alt="Logo" width="30" height="24"
                         class="d-inline-block align-text-top">
-                    Bootstrap
+                    Skill NEXUS
                 </a>
             </div>
         </nav>
         <nav class="navbar navbar-expand-lg bg-body-tertiary">
             <div class="container-fluid">
-                <a class="navbar-brand" href="#">Navbar</a>
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                     data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
                     aria-expanded="false" aria-label="Toggle navigation">
@@ -48,16 +49,17 @@ try {
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="career/career_test.php">career test</a>
+                            <a class="nav-link active" aria-current="page"
+                                href="<?php echo BASE_URL; ?>/career/career_test.php">career test</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="results/careers.php">careers</a>
+                            <a class="nav-link" href="<?php echo BASE_URL; ?>/results/careers.php">careers</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="reulst/degrees.php">degrees</a>
+                            <a class="nav-link" href="<?php echo BASE_URL; ?>/results/degrees.php">degrees</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="community.php">community</a>
+                            <a class="nav-link" href="<?php echo BASE_URL; ?>/community.php">community</a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
@@ -65,19 +67,20 @@ try {
                                 More
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="partners & blog/partners.php">Blog</a></li>
-                                <li><a class="dropdown-item" href="partners & blog/blog.php">Partners</a></li>
+                                <li><a class="dropdown-item"
+                                        href="<?php echo BASE_URL; ?>/partners & blog/partners.php">Blog</a></li>
+                                <li><a class="dropdown-item"
+                                        href="<?php echo BASE_URL; ?>/partners & blog/blog.php">Partners</a></li>
 
                             </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-                        </li>
+
                     </ul>
                     <form class="d-flex" role="search">
                         <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" />
                         <button class="btn btn-outline-success" type="submit">Search</button>
                     </form>
+                    <a href="<?php echo BASE_URL; ?>/auth/login.php" class="btn btn-outline-success">Login</a>
                 </div>
             </div>
         </nav>

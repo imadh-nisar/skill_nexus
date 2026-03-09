@@ -10,13 +10,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $stmt = $pdo->prepare($sql);
   $stmt->execute([$email]);
 
-  session_start();
-
   if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     if (password_verify($password, $row['password'])) {
       session_regenerate_id(true); // prevent fixation
       $_SESSION['user'] = $row['name'];
-      header("Location: ../index_.php");
+
+      // Check if redirect URL is stored
+      $redirect = isset($_SESSION['redirect_url']) ? $_SESSION['redirect_url'] : '../index.php';
+
+      // Clear it after use
+      unset($_SESSION['redirect_url']);
+
+      header("Location: " . $redirect);
       exit();
     } else {
       $error = "Invalid password.";
@@ -24,6 +29,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   } else {
     $error = "No user found.";
   }
+}
+
+// Capture redirect if passed in query string
+if (isset($_GET['redirect'])) {
+  $_SESSION['redirect_url'] = $_GET['redirect'];
 }
 ?>
 <!DOCTYPE html>
@@ -56,3 +66,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </body>
 
 </html>
+<!DOCTYPE html>
+<html>

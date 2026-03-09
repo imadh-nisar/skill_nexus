@@ -18,6 +18,10 @@ function redirect($url)
 function requireLogin()
 {
     if (!isset($_SESSION['user_id'])) {
-        redirect('/login.php');
+        // Capture current page
+        $currentUrl = $_SERVER['REQUEST_URI'];
+
+        // Redirect to login with ?redirect=...
+        redirect('/login.php?redirect=' . urlencode($currentUrl));
     }
 }

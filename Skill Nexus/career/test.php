@@ -30,7 +30,7 @@ $questions = [
 <body class="bg-light">
   <div class="container py-5">
     <h1 class="mb-4 text-primary">Career Guidance Test</h1>
-    <form action="/../results/result.php" method="post">
+    <form action="../results/result.php" method="post">
       <?php foreach ($questions as $index => $question): ?>
         <div class="mb-3">
           <label class="form-label"><strong>Q<?= $index + 1 ?>:</strong> <?= $question; ?></label>
