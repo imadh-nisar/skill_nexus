@@ -1,27 +1,35 @@
 <?php
-include '../config.php'; // DB connection
+require_once __DIR__ . '/../config.php'; // DB connection
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  $name = $_POST['name'];
-  $email = $_POST['email'];
+  $name = trim($_POST['name']);
+  $email = trim($_POST['email']);
   $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
 
   try {
-    $sql = "INSERT INTO users (username, email, password) VALUES (:name, :email, :password)";
-    $stmt = $pdo->prepare($sql);
-
-    $stmt->bindParam(':name', $name, PDO::PARAM_STR);
-    $stmt->bindParam(':email', $email, PDO::PARAM_STR);
-    $stmt->bindParam(':password', $password, PDO::PARAM_STR);
-
-    if ($stmt->execute()) {
-      header("Location: login.php?success=registered");
-      exit();
+    // Prevent duplicate email registrations
+    $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+    $check->execute([$email]);
+    if ($check->fetch()) {
+      $error = "An account with that email already exists.";
     } else {
-      echo "Error: Could not execute statement.";
+      $sql = "INSERT INTO users (name, email, password) VALUES (:name, :email, :password)";
+      $stmt = $pdo->prepare($sql);
+
+      $stmt->bindParam(':name', $name, PDO::PARAM_STR);
+      $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+      $stmt->bindParam(':password', $password, PDO::PARAM_STR);
+
+      if ($stmt->execute()) {
+        header("Location: login.php?success=registered");
+        exit();
+      } else {
+        $error = "Error: Could not create account.";
+      }
     }
   } catch (PDOException $e) {
-    echo "Database Error: " . $e->getMessage();
+    // In production, do not expose details
+    $error = "Database Error: " . $e->getMessage();
   }
 }
 ?>
@@ -35,6 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 
 <body class="bg-light">
+  <?php renderNav(); ?>
   <div class="container mt-5">
     <div class="card p-4 shadow">
       <h2 class="mb-3">Create Account</h2>

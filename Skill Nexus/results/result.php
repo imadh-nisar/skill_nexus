@@ -1,28 +1,39 @@
 <?php
 require_once __DIR__ . '/../config.php';   // fixed path
-require_once __DIR__ . '/../helpers.php';  // fixed path
 
 // Ensure user is logged in
-session_start();
-if (!isset($_SESSION['user_id'])) {
-  header("Location: ../auth/login.php");
-  exit;
-}
+requireLogin();
 
 $userId = (int) $_SESSION['user_id']; // enforce integer
 
-// Fetch user answers (optional if not used later)
-$stmt = $pdo->prepare("SELECT question_id, answer_id FROM user_answers WHERE user_id = ?");
-$stmt->execute([$userId]);
-$userAnswers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Store submitted answers for the logged-in user
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['answers']) && is_array($_POST['answers'])) {
+  $answers = $_POST['answers'];
 
-// Optimized query: join directly with user_answers
+  // Replace any previously stored answers for this user
+  $stmt = $pdo->prepare("DELETE FROM user_answers WHERE user_id = ?");
+  $stmt->execute([$userId]);
+
+  $insert = $pdo->prepare("INSERT INTO user_answers (user_id, question_id, answer_value) VALUES (?, ?, ?)");
+  foreach ($answers as $index => $value) {
+    $questionId = (int) $index + 1;
+    $answerValue = trim((string) $value);
+    if ($answerValue === '') {
+      continue;
+    }
+    $insert->execute([$userId, $questionId, $answerValue]);
+  }
+}
+
+// Fetch career matches based on stored answers
 $query = "
-    SELECT c.id, c.name, c.description, d.name AS degree, COUNT(cam.answer_id) AS match_count
+    SELECT c.id, c.name, c.description, d.name AS degree, COUNT(*) AS match_count
     FROM careers c
-    JOIN career_answer_map cam ON c.id = cam.career_id
-    JOIN degrees d ON c.degree_id = d.id
-    JOIN user_answers ua ON cam.answer_id = ua.answer_id AND ua.user_id = ?
+    LEFT JOIN degrees d ON c.degree_id = d.id
+    LEFT JOIN career_preferences cp ON c.id = cp.career_id
+    LEFT JOIN user_answers ua ON cp.question_id = ua.question_id
+        AND cp.preferred_answer = ua.answer_value
+        AND ua.user_id = ?
     GROUP BY c.id
     ORDER BY match_count DESC
 ";
@@ -36,14 +47,14 @@ $careers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
   <meta charset="UTF-8">
   <title>Results</title>
-  <link rel="stylesheet" href="<?= $basePath ?>/assets/css/bootstrap.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body>
+  <?php renderNav(); ?>
   <div class="container mt-5">
     <h1 class="mb-4">
-      Your Career Guidance
-      Results<?= isset($_SESSION['username']) ? ', ' . htmlspecialchars($_SESSION['username']) : '' ?>
+      Your Career Guidance Results<?= !empty($_SESSION['user_name']) ? ', ' . e($_SESSION['user_name']) : '' ?>
     </h1>
 
     <?php if (empty($careers)): ?>
@@ -62,11 +73,11 @@ $careers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <p><strong>Match Score:</strong> <?= (int) $career['match_count'] ?> answers matched</p>
               </div>
               <div class="card-footer d-flex justify-content-between">
-                <a href="<?= $basePath ?>/advice.php?career_id=<?= $career['id'] ?>" class="btn btn-primary">
-                  Get Advice
+                <a href="<?= BASE_URL ?>/career/career_test.php" class="btn btn-primary">
+                  Retake Test
                 </a>
-                <a href="<?= $basePath ?>/degree.php?id=<?= $career['id'] ?>" class="btn btn-outline-secondary">
-                  View Degree Path
+                <a href="<?= BASE_URL ?>/results/degrees.php" class="btn btn-outline-secondary">
+                  View Degree Paths
                 </a>
               </div>
             </div>
@@ -76,7 +87,7 @@ $careers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php endif; ?>
   </div>
 
-  <script src="<?= $basePath ?>/assets/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

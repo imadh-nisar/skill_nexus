@@ -1,5 +1,13 @@
-<?php
-include __DIR__ . '/../config.php';
+﻿<?php
+require_once __DIR__ . '/../config.php';
+
+// Load careers from the database
+$careers = $pdo->query(
+    'SELECT c.id, c.name, c.description, c.degree_id, d.name AS degree_name
+     FROM careers c
+     LEFT JOIN degrees d ON c.degree_id = d.id
+     ORDER BY c.name'
+)->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -32,56 +40,46 @@ include __DIR__ . '/../config.php';
 </head>
 
 <body>
-
-    <!-- Your Navbar goes here -->
+    <?php renderNav(); ?>
 
     <header class="text-center py-5 bg-success text-white" style="margin-top: 50px;">
         <div class="container">
             <h1 class="fw-bold">Top Careers</h1>
-            <p class="lead">Explore the most liked and most challenging careers with salary insights.</p>
+            <p class="lead">Explore careers that match your interests and strengths.</p>
         </div>
     </header>
 
     <section class="py-5">
         <div class="container">
-            <div class="row g-4">
-                <!-- Career Card 1 -->
-                <div class="col-md-4">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-body">
-                            <h5 class="card-title text-success">Software Developer</h5>
-                            <p class="card-text">💚 Most Liked<br>Average Salary: $80,000<br>Growth Rate: 22%</p>
-                            <a href="#" class="btn btn-career">Learn More</a>
+            <?php if (empty($careers)): ?>
+                <div class="alert alert-info">No careers found in the database.</div>
+            <?php else: ?>
+                <div class="row g-4">
+                    <?php foreach ($careers as $career): ?>
+                        <div class="col-md-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title text-success"><?= htmlspecialchars($career['name']) ?></h5>
+                                    <p class="card-text"><?= nl2br(htmlspecialchars($career['description'])) ?></p>
+                                    <?php if (!empty($career['degree_name'])): ?>
+                                        <p class="mb-2"><strong>Suggested Degree:</strong>
+                                            <?= htmlspecialchars($career['degree_name']) ?></p>
+                                    <?php endif; ?>
+                                    <a href="<?= BASE_URL ?>/results/degrees.php?degree_id=<?= (int) $career['degree_id'] ?>"
+                                        class="btn btn-career">View Degree Path</a>
+                                    <a href="<?= BASE_URL ?>/results/result.php" class="btn btn-outline-light">Explore
+                                        Matches</a>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-                <!-- Career Card 2 -->
-                <div class="col-md-4">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-body">
-                            <h5 class="card-title text-success">Data Analyst</h5>
-                            <p class="card-text">💚 Popular<br>Average Salary: $70,000<br>Growth Rate: 25%</p>
-                            <a href="#" class="btn btn-career">Learn More</a>
-                        </div>
-                    </div>
-                </div>
-                <!-- Career Card 3 -->
-                <div class="col-md-4">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-body">
-                            <h5 class="card-title text-success">Customer Support</h5>
-                            <p class="card-text">💔 Most Hated<br>Average Salary: $35,000<br>High Stress Levels</p>
-                            <a href="#" class="btn btn-career">Learn More</a>
-                        </div>
-                    </div>
-                </div>
-                <!-- Add more rows of 3 cards as needed -->
-            </div>
+            <?php endif; ?>
         </div>
     </section>
 
     <footer class="bg-success text-white text-center py-3">
-        <p>&copy; 2026 Career Guidance. All rights reserved.</p>
+        <p>&copy; <?= date('Y') ?> Career Guidance. All rights reserved.</p>
     </footer>
 
 </body>

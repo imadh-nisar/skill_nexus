@@ -49,9 +49,7 @@ include __DIR__ . '/config.php';
 </head>
 
 <body>
-
-    <!-- Your Navbar goes here -->
-    <!-- Paste your navbar code above this line -->
+    <?php renderNav(); ?>
 
     <!-- Hero Section -->
     <header class="text-center py-5 bg-success text-white" style="margin-top: 50px;">
@@ -245,7 +243,7 @@ include __DIR__ . '/config.php';
                     <label for="message" class="form-label">Message</label>
                     <textarea class="form-control" id="message" rows="4" placeholder="Write your message"></textarea>
                 </div>
-                <button type=" submit" class="btn btn-primary">Send Message</button>
+                <button type="submit" class="btn btn-primary">Send Message</button>
             </form>
         </div>
     </section>

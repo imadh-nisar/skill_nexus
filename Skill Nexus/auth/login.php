@@ -13,12 +13,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     if (password_verify($password, $row['password'])) {
       session_regenerate_id(true); // prevent fixation
-      $_SESSION['user'] = $row['name'];
+      $_SESSION['user_id'] = $row['id'];
+      $_SESSION['user_name'] = $row['name'];
+      $_SESSION['user_email'] = $row['email'];
 
-      // Check if redirect URL is stored
-      $redirect = isset($_SESSION['redirect_url']) ? $_SESSION['redirect_url'] : '../index.php';
-
-      // Clear it after use
+      // Redirect back to the originally requested page when possible
+      $redirect = $_SESSION['redirect_url'] ?? (BASE_URL . '/index_.php');
       unset($_SESSION['redirect_url']);
 
       header("Location: " . $redirect);
@@ -45,6 +45,7 @@ if (isset($_GET['redirect'])) {
 </head>
 
 <body class="bg-light">
+  <?php renderNav(); ?>
   <div class="container mt-5">
     <div class="card p-4 shadow">
       <h2 class="mb-3">Login</h2>
@@ -66,5 +67,3 @@ if (isset($_GET['redirect'])) {
 </body>
 
 </html>
-<!DOCTYPE html>
-<html>

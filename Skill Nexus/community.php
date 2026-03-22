@@ -44,8 +44,7 @@ include __DIR__ . '/config.php';
 
 <body>
 
-    <!-- Your Navbar goes here -->
-    <!-- Paste your navbar code above this line -->
+    <?php renderNav(); ?>
 
     <!-- Hero Section -->
     <header class="text-center py-5 bg-primary text-white" style="margin-top: 50px;">
