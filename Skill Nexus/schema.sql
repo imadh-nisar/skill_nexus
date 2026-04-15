@@ -1,104 +1,122 @@
-﻿-- Database schema for Skill Nexus (Career Guidance)
--- Created: March 2026
--- Run this in MySQL / MariaDB (e.g., via phpMyAdmin, mysql CLI, or a migration tool).
+﻿-- Modern Database Schema for Skill Nexus (Career Guidance)  
+-- Updated: April 2026
+-- Efficient, scalable structure - no user login required for main platform
 
 CREATE DATABASE IF NOT EXISTS `career_guidance` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `career_guidance`;
 
--- Users (authentication)
-DROP TABLE IF EXISTS `users`;
-CREATE TABLE `users` (
+-- Admin users (ONLY for dashboard, no constraints on main platform)
+DROP TABLE IF EXISTS `admin_users`;
+CREATE TABLE `admin_users` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(191) NOT NULL,
+  `username` VARCHAR(191) NOT NULL UNIQUE,
   `email` VARCHAR(191) NOT NULL UNIQUE,
   `password` VARCHAR(255) NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Degrees associated with careers
+-- Degrees/Educational paths
 DROP TABLE IF EXISTS `degrees`;
 CREATE TABLE `degrees` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL,
   `description` TEXT,
+  `duration` VARCHAR(100),
+  `icon` VARCHAR(255),
+  `color_code` VARCHAR(7),
+  `is_active` BOOLEAN DEFAULT TRUE,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Careers and their recommended degree
+-- Careers - unlimited entries
 DROP TABLE IF EXISTS `careers`;
 CREATE TABLE `careers` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL,
   `description` TEXT,
-  `degree_id` INT UNSIGNED DEFAULT NULL,
+  `average_salary` VARCHAR(100),
+  `job_outlook` TEXT,
+  `icon` VARCHAR(255),
+  `is_active` BOOLEAN DEFAULT TRUE,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  INDEX (`degree_id`),
-  CONSTRAINT `fk_careers_degree` FOREIGN KEY (`degree_id`) REFERENCES `degrees` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Questions used in the career guidance test
+-- Career-Degree relationships (many-to-many)
+DROP TABLE IF EXISTS `career_degrees`;
+CREATE TABLE `career_degrees` (
+  `career_id` INT UNSIGNED NOT NULL,
+  `degree_id` INT UNSIGNED NOT NULL,
+  `PRIMARY KEY` (`career_id`, `degree_id`),
+  INDEX (`career_id`),
+  INDEX (`degree_id`),
+  CONSTRAINT `fk_career_degrees_career` FOREIGN KEY (`career_id`) REFERENCES `careers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_career_degrees_degree` FOREIGN KEY (`degree_id`) REFERENCES `degrees` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Assessment Questions (20 core questions for career test)
 DROP TABLE IF EXISTS `questions`;
 CREATE TABLE `questions` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `question_text` TEXT NOT NULL,
+  `question_type` VARCHAR(50) DEFAULT 'multiple_choice',
+  `category` VARCHAR(100),
+  `sequence` INT NOT NULL,
+  `is_active` BOOLEAN DEFAULT TRUE,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_sequence` (`sequence`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Predefined answers for each question (used for matching)
-DROP TABLE IF EXISTS `answers`;
-CREATE TABLE `answers` (
+-- Question Options/Answers
+DROP TABLE IF EXISTS `question_options`;
+CREATE TABLE `question_options` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `question_id` INT UNSIGNED NOT NULL,
-  `answer_value` VARCHAR(50) NOT NULL,
+  `option_text` VARCHAR(255) NOT NULL,
+  `option_value` INT NOT NULL,
+  `sequence` INT,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   INDEX (`question_id`),
-  CONSTRAINT `fk_answers_question` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `fk_question_options_question` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Stores a user's answers to the questions (stored as the literal answer value for quick lookups)
-DROP TABLE IF EXISTS `user_answers`;
-CREATE TABLE `user_answers` (
+-- Career-Answer Scoring Mapping (maps answer patterns to careers)
+DROP TABLE IF EXISTS `career_scoring`;
+CREATE TABLE `career_scoring` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `user_id` INT UNSIGNED NOT NULL,
+  `career_id` INT UNSIGNED NOT NULL,
   `question_id` INT UNSIGNED NOT NULL,
-  `answer_value` VARCHAR(50) NOT NULL,
+  `selected_option_value` INT NOT NULL,
+  `score_weight` DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX (`career_id`),
+  INDEX (`question_id`),
+  UNIQUE KEY `unique_combination` (`career_id`, `question_id`, `selected_option_value`),
+  CONSTRAINT `fk_career_scoring_career` FOREIGN KEY (`career_id`) REFERENCES `careers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_career_scoring_question` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Test Results (for analytics)
+DROP TABLE IF EXISTS `test_results`;
+CREATE TABLE `test_results` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `session_id` VARCHAR(255) NOT NULL UNIQUE,
+  `career_recommendations` JSON,
+  `degree_recommendations` JSON,
+  `overall_score` DECIMAL(5,2),
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  INDEX (`user_id`),
-  INDEX (`question_id`),
-  INDEX (`answer_value`),
-  CONSTRAINT `fk_user_answers_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_user_answers_question` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Mapping between careers and preferred answers (used to score matches)
-DROP TABLE IF EXISTS `career_answer_map`;
-CREATE TABLE `career_answer_map` (
-  `career_id` INT UNSIGNED NOT NULL,
-  `answer_id` INT UNSIGNED NOT NULL,
-  PRIMARY KEY (`career_id`, `answer_id`),
-  INDEX (`career_id`),
-  INDEX (`answer_id`),
-  CONSTRAINT `fk_career_answer_map_career` FOREIGN KEY (`career_id`) REFERENCES `careers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_career_answer_map_answer` FOREIGN KEY (`answer_id`) REFERENCES `answers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Optional legacy table (kept for compatibility with other scripts)
-DROP TABLE IF EXISTS `career_preferences`;
-CREATE TABLE `career_preferences` (
-  `career_id` INT UNSIGNED NOT NULL,
-  `question_id` INT UNSIGNED NOT NULL,
-  `preferred_answer` VARCHAR(50) NOT NULL,
-  PRIMARY KEY (`career_id`, `question_id`, `preferred_answer`),
-  INDEX (`career_id`),
-  INDEX (`question_id`),
-  CONSTRAINT `fk_career_preferences_career` FOREIGN KEY (`career_id`) REFERENCES `careers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_career_preferences_question` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  INDEX (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Seed data (basic starter data)
@@ -191,8 +209,160 @@ INSERT INTO `degrees` (`name`, `description`) VALUES
   ('Robotics Engineering', 'Design and control of robotic systems.'),
   ('Software Quality Assurance', 'Testing and ensuring software quality.');
 
-INSERT INTO `careers` (`name`, `description`, `degree_id`) VALUES
-  ('Software Developer', 'Builds applications, systems, and software solutions.', 1),
+-- 20-Question Assessment System with Options
+INSERT INTO `questions` (`question_text`, `category`, `sequence`) VALUES
+  ('Do you enjoy working with numbers and data?', 'Interest', 1),
+  ('Do you prefer logical problem-solving over creative design?', 'WorkStyle', 2),
+  ('Do you prefer working alone rather than in a team?', 'WorkStyle', 3),
+  ('Would you enjoy a career that involves frequent travel?', 'Lifestyle', 4),
+  ('Do you like explaining concepts to others?', 'Interest', 5),
+  ('Are you comfortable with coding and technology?', 'Interest', 6),
+  ('Do you prefer stability over risk-taking in your career?', 'Motivation', 7),
+  ('Do you enjoy researching and writing?', 'Interest', 8),
+  ('Would you like to manage people and projects?', 'Interest', 9),
+  ('Do you prefer practical hands-on work over theoretical analysis?', 'WorkStyle', 10),
+  ('Are you motivated by high salary rather than personal satisfaction?', 'Motivation', 11),
+  ('Do you enjoy solving puzzles and complex problems?', 'Interest', 12),
+  ('Would you like to work in healthcare or education?', 'Interest', 13),
+  ('Do you prefer working indoors rather than outdoors?', 'Lifestyle', 14),
+  ('Are you interested in entrepreneurship and starting your own business?', 'Motivation', 15),
+  ('Do you have strong communication skills?', 'Interest', 16),
+  ('Do you prefer helping others over competing?', 'WorkStyle', 17),
+  ('Are you highly creative and design-focused?', 'Interest', 18),
+  ('Do you want a career with leadership opportunities?', 'Motivation', 19),
+  ('Do you enjoy learning about emerging technologies?', 'Interest', 20);
+
+-- Question Options (1-4 scale for scoring)
+INSERT INTO `question_options` (`question_id`, `option_text`, `option_value`, `sequence`) VALUES
+  -- Q1 options
+  (1, 'Strongly Agree', 4, 1),
+  (1, 'Agree', 3, 2),
+  (1, 'Disagree', 2, 3),
+  (1, 'Strongly Disagree', 1, 4),
+  -- Q2 options
+  (2, 'Strongly Agree', 4, 1),
+  (2, 'Agree', 3, 2),
+  (2, 'Disagree', 2, 3),
+  (2, 'Strongly Disagree', 1, 4),
+  -- Q3 options
+  (3, 'Strongly Agree', 4, 1),
+  (3, 'Agree', 3, 2),
+  (3, 'Disagree', 2, 3),
+  (3, 'Strongly Disagree', 1, 4),
+  -- Q4 options
+  (4, 'Strongly Agree', 4, 1),
+  (4, 'Agree', 3, 2),
+  (4, 'Disagree', 2, 3),
+  (4, 'Strongly Disagree', 1, 4),
+  -- Q5 options
+  (5, 'Strongly Agree', 4, 1),
+  (5, 'Agree', 3, 2),
+  (5, 'Disagree', 2, 3),
+  (5, 'Strongly Disagree', 1, 4),
+  -- Q6 options
+  (6, 'Strongly Agree', 4, 1),
+  (6, 'Agree', 3, 2),
+  (6, 'Disagree', 2, 3),
+  (6, 'Strongly Disagree', 1, 4),
+  -- Q7 options
+  (7, 'Strongly Agree', 4, 1),
+  (7, 'Agree', 3, 2),
+  (7, 'Disagree', 2, 3),
+  (7, 'Strongly Disagree', 1, 4),
+  -- Q8 options
+  (8, 'Strongly Agree', 4, 1),
+  (8, 'Agree', 3, 2),
+  (8, 'Disagree', 2, 3),
+  (8, 'Strongly Disagree', 1, 4),
+  -- Q9 options
+  (9, 'Strongly Agree', 4, 1),
+  (9, 'Agree', 3, 2),
+  (9, 'Disagree', 2, 3),
+  (9, 'Strongly Disagree', 1, 4),
+  -- Q10 options
+  (10, 'Strongly Agree', 4, 1),
+  (10, 'Agree', 3, 2),
+  (10, 'Disagree', 2, 3),
+  (10, 'Strongly Disagree', 1, 4),
+  -- Q11 options
+  (11, 'Strongly Agree', 4, 1),
+  (11, 'Agree', 3, 2),
+  (11, 'Disagree', 2, 3),
+  (11, 'Strongly Disagree', 1, 4),
+  -- Q12 options
+  (12, 'Strongly Agree', 4, 1),
+  (12, 'Agree', 3, 2),
+  (12, 'Disagree', 2, 3),
+  (12, 'Strongly Disagree', 1, 4),
+  -- Q13 options
+  (13, 'Strongly Agree', 4, 1),
+  (13, 'Agree', 3, 2),
+  (13, 'Disagree', 2, 3),
+  (13, 'Strongly Disagree', 1, 4),
+  -- Q14 options
+  (14, 'Strongly Agree', 4, 1),
+  (14, 'Agree', 3, 2),
+  (14, 'Disagree', 2, 3),
+  (14, 'Strongly Disagree', 1, 4),
+  -- Q15 options
+  (15, 'Strongly Agree', 4, 1),
+  (15, 'Agree', 3, 2),
+  (15, 'Disagree', 2, 3),
+  (15, 'Strongly Disagree', 1, 4),
+  -- Q16 options
+  (16, 'Strongly Agree', 4, 1),
+  (16, 'Agree', 3, 2),
+  (16, 'Disagree', 2, 3),
+  (16, 'Strongly Disagree', 1, 4),
+  -- Q17 options
+  (17, 'Strongly Agree', 4, 1),
+  (17, 'Agree', 3, 2),
+  (17, 'Disagree', 2, 3),
+  (17, 'Strongly Disagree', 1, 4),
+  -- Q18 options
+  (18, 'Strongly Agree', 4, 1),
+  (18, 'Agree', 3, 2),
+  (18, 'Disagree', 2, 3),
+  (18, 'Strongly Disagree', 1, 4),
+  -- Q19 options
+  (19, 'Strongly Agree', 4, 1),
+  (19, 'Agree', 3, 2),
+  (19, 'Disagree', 2, 3),
+  (19, 'Strongly Disagree', 1, 4),
+  -- Q20 options
+  (20, 'Strongly Agree', 4, 1),
+  (20, 'Agree', 3, 2),
+  (20, 'Disagree', 2, 3),
+  (20, 'Strongly Disagree', 1, 4);
+
+-- Career Scoring Rules (maps answer values to career scores)
+-- Example: If user scores high (3-4) on technical questions, they match tech careers
+INSERT INTO `career_scoring` (`career_id`, `question_id`, `selected_option_value`, `score_weight`) VALUES
+  -- Software Developer (career_id = 1)
+  (1, 1, 4, 2.0), (1, 1, 3, 1.5),  -- High on numbers
+  (1, 2, 4, 2.0), (1, 2, 3, 1.5),  -- Logic-focused
+  (1, 6, 4, 2.0), (1, 6, 3, 1.5),  -- Tech comfort
+  (1, 12, 4, 2.0), (1, 12, 3, 1.5), -- Problem solving
+  
+  -- Data Analyst (career_id = 2)
+  (2, 1, 4, 2.0), (2, 1, 3, 1.5),  -- Works with data
+  (2, 8, 4, 1.5), (2, 8, 3, 1.0),  -- Research writing
+  (2, 12, 4, 1.5), (2, 12, 3, 1.0), -- Problem solving
+  
+  -- Project Manager (career_id = 3)
+  (3, 9, 4, 2.0), (3, 9, 3, 1.5),  -- Managing people
+  (3, 5, 4, 1.5), (3, 5, 3, 1.0),  -- Explaining concepts
+  (3, 16, 4, 1.5), (3, 16, 3, 1.0), -- Communication
+  
+  -- UI/UX Designer (career_id = 4)
+  (4, 18, 4, 2.0), (4, 18, 3, 1.5), -- Creative design
+  (4, 5, 4, 1.5), (4, 5, 3, 1.0),   -- Explaining concepts
+  (4, 2, 1, 1.5), (4, 2, 2, 1.0),   -- NOT just logical
+  
+  -- Healthcare roles (career_id = 25)
+  (25, 13, 4, 2.0), (25, 13, 3, 1.5), -- Interest in healthcare
+  (25, 17, 4, 1.5), (25, 17, 3, 1.0), -- Helping others
+  (25, 3, 2, 1.0), (25, 3, 1, 1.5);   -- Team work preferred
   ('Data Analyst', 'Analyzes data to provide insights and inform decisions.', 2),
   ('Project Manager', 'Coordinates teams, plans projects, and delivers outcomes.', 3),
   ('UI/UX Designer', 'Designs user experiences and interfaces for digital products.', 4),

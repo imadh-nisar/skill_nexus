@@ -18,7 +18,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       $_SESSION['user_email'] = $row['email'];
 
       // Redirect back to the originally requested page when possible
-      $redirect = $_SESSION['redirect_url'] ?? (BASE_URL . '/index_.php');
+      $redirect = $_SESSION['redirect_url'] ?? (BASE_URL . '/index.php');
       unset($_SESSION['redirect_url']);
 
       header("Location: " . $redirect);
