@@ -284,6 +284,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['answers'])) {
       }
     }
   </style>
+  <link rel="stylesheet" href="<?= BASE_URL ?>/assets/styles.css">
 </head>
 
 <body>
@@ -436,6 +437,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['answers'])) {
     // Show first question
     showQuestion(1);
   </script>
+
+  <?php renderFooter(); ?>
 </body>
 
 </html>

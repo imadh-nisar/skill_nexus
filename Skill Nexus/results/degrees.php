@@ -18,18 +18,24 @@ $degrees = $stmt->fetchAll();
 $total = $pdo->query("SELECT COUNT(*) as count FROM degrees WHERE is_active = TRUE")->fetch()['count'];
 $pages = ceil($total / $limit);
 
-function getDegreeCareers($pdo, $degree_id)
+
+// --- Suggestion function ---
+function getDegreeSuggestions(PDO $pdo, int $degree_id): array
 {
     $stmt = $pdo->prepare("
-        SELECT c.* FROM careers c
+        SELECT c.* 
+        FROM careers c
         JOIN career_degrees cd ON c.id = cd.career_id
-        WHERE cd.degree_id = :degree_id AND c.is_active = TRUE
-        LIMIT 3
+        WHERE cd.degree_id = :degree_id AND c.is_active = 1
+        ORDER BY c.name ASC
     ");
-    $stmt->execute([':degree_id' => $degree_id]);
-    return $stmt->fetchAll();
+    $stmt->execute(['degree_id' => $degree_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
+
+
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -236,6 +242,7 @@ function getDegreeCareers($pdo, $degree_id)
             }
         }
     </style>
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/styles.css">
 </head>
 
 <body>
@@ -249,8 +256,8 @@ function getDegreeCareers($pdo, $degree_id)
     <?php if (!empty($degrees)): ?>
         <div class="degree-grid">
             <?php foreach ($degrees as $degree):
-                $careers = getDegreeCareers($pdo, $degree['id']);
                 $bgColor = isset($degree['color_code']) && $degree['color_code'] ? $degree['color_code'] : '#667eea';
+                $careers = getDegreeSuggestions($pdo, $degree['id']); // fetch related careers
                 ?>
                 <div class="degree-card">
                     <div class="degree-header">
@@ -259,7 +266,8 @@ function getDegreeCareers($pdo, $degree_id)
                     </div>
                     <div class="degree-body">
                         <p class="degree-description">
-                            <?= e(substr($degree['description'] ?? '', 0, 120)) ?>        <?= strlen($degree['description'] ?? '') > 120 ? '...' : '' ?>
+                            <?= e(substr($degree['description'] ?? '', 0, 120)) ?>
+                            <?= strlen($degree['description'] ?? '') > 120 ? '...' : '' ?>
                         </p>
 
                         <div class="degree-meta">
@@ -292,52 +300,9 @@ function getDegreeCareers($pdo, $degree_id)
                 </div>
             <?php endforeach; ?>
         </div>
-
-        <?php if ($pages > 1): ?>
-            <nav aria-label="Degrees pagination">
-                <ul class="pagination">
-                    <?php if ($page > 1): ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1">First</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page=<?= $page - 1 ?>">Previous</a>
-                        </li>
-                    <?php endif; ?>
-
-                    <?php
-                    $start = max(1, $page - 2);
-                    $end = min($pages, $page + 2);
-                    for ($i = $start; $i <= $end; $i++):
-                        ?>
-                        <li class="page-item <?= $i === $page ? 'active' : '' ?>">
-                            <a class="page-link" href="?page=<?= $i ?>"><?= $i ?></a>
-                        </li>
-                    <?php endfor; ?>
-
-                    <?php if ($page < $pages): ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?page=<?= $page + 1 ?>">Next</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page=<?= $pages ?>">Last</a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </nav>
-        <?php endif; ?>
-    <?php else: ?>
-        <div class="empty-state">
-            <div class="empty-state-icon"><i class="fas fa-book"></i></div>
-            <h3>No Degrees Found</h3>
-            <p>Check back soon for educational programs!</p>
-        </div>
     <?php endif; ?>
 
-    <footer
-        style="background: linear-gradient(135deg, #2d3561 0%, #1a1f3a 100%); color: white; padding: 40px 20px; text-align: center; margin-top: 60px;">
-        <p style="margin: 0;">&copy; 2026 Skill NEXUS. All rights reserved.</p>
-    </footer>
+    <?php renderFooter(); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

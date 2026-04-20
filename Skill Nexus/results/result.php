@@ -82,7 +82,7 @@ if ($totalQuestions === 0) {
     <meta charset="UTF-8">
     <title>Results</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  </head>
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/styles.css">
 
   <body>
     <?php renderNav(); ?>
@@ -207,7 +207,8 @@ $displayResults = array_slice($results, 0, 20);
 
                 <div class="mb-2">
                   <div class="small text-muted">Characteristics: <?= (int) $career['match_characteristics'] ?> /
-                    <?= $characteristicsCount ?></div>
+                    <?= $characteristicsCount ?>
+                  </div>
                   <div class="progress progress-small mb-2">
                     <div class="progress-bar bg-info" role="progressbar"
                       style="width: <?= $characteristicsCount ? (int) round(($career['match_characteristics'] / $characteristicsCount) * 100) : 0 ?>%"
@@ -224,7 +225,8 @@ $displayResults = array_slice($results, 0, 20);
                   </div>
 
                   <div class="small text-muted">Preferences: <?= (int) $career['match_preferences'] ?> /
-                    <?= $preferencesCount ?></div>
+                    <?= $preferencesCount ?>
+                  </div>
                   <div class="progress progress-small">
                     <div class="progress-bar bg-warning" role="progressbar"
                       style="width: <?= $preferencesCount ? (int) round(($career['match_preferences'] / $preferencesCount) * 100) : 0 ?>%"

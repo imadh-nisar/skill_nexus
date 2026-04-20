@@ -69,16 +69,7 @@ if ($result && $result['career_recommendations']) {
 $recommendations = getCareerRecommendations($pdo, $answers);
 
 // Get related degrees for recommended careers
-function getCareerDegrees($pdo, $career_id)
-{
-    $stmt = $pdo->prepare("
-        SELECT d.* FROM degrees d
-        JOIN career_degrees cd ON d.id = cd.degree_id
-        WHERE cd.career_id = :career_id AND d.is_active = TRUE
-    ");
-    $stmt->execute([':career_id' => $career_id]);
-    return $stmt->fetchAll();
-}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -408,6 +399,7 @@ function getCareerDegrees($pdo, $career_id)
             }
         }
     </style>
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/styles.css">
 </head>
 
 <body>
@@ -497,6 +489,8 @@ function getCareerDegrees($pdo, $career_id)
             </div>
         <?php endif; ?>
     </div>
+
+    <?php renderFooter(); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>

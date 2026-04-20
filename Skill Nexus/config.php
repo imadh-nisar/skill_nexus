@@ -59,15 +59,15 @@ function requireAdminLogin(): void
 function renderNav(): void
 {
     ?>
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <nav class="navbar navbar-expand-lg navbar-dark primary-navbar">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="<?= BASE_URL ?>/index.php" style="font-size: 1.8rem;">🚀 Skill NEXUS</a>
+            <a class="navbar-brand fw-bold" href="<?= BASE_URL ?>/index.php">🚀 Skill NEXUS</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                 aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Explore</a>
                         <ul class="dropdown-menu dropdown-menu-dark">
@@ -81,12 +81,27 @@ function renderNav(): void
                     </li>
                     <li class="nav-item"><a class="nav-link"
                             href="<?= BASE_URL ?>/partners%20&%20blog/partners.php">Partners</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/admin/login.php"
-                            class="btn btn-light btn-sm ms-2">Admin</a></li>
+                    <li class="nav-item"><a class="nav-link btn-primary-ghost px-4 py-2 ms-lg-3"
+                            href="<?= BASE_URL ?>/admin/login.php">Admin</a></li>
                 </ul>
             </div>
         </div>
     </nav>
+    <?php
+}
+
+// Render modern footer
+function renderFooter(): void
+{
+    ?>
+    <footer
+        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; margin-top: 60px; border-top: 1px solid rgba(102, 126, 234, 0.2);">
+        <div class="container">
+            <p><strong>&copy; 2026 Skill NEXUS</strong> - Discover Your Perfect Career Path</p>
+            <p class="small" style="margin: 10px 0 0 0; opacity: 0.8;">Helping students and professionals find their ideal
+                career with data-driven guidance and expert insights.</p>
+        </div>
+    </footer>
     <?php
 }
 
@@ -126,23 +141,134 @@ function getQuestionOptions($pdo, $question_id)
 }
 
 // Calculate career scores based on test answers
+// Calculate career scores based on test answers (IMPROVED)
 function calculateCareerScores($pdo, $answers)
 {
-    $stmt = $pdo->prepare("
+    if (empty($answers)) {
+        return [];
+    }
+
+    // Build dynamic query based on number of answers
+    $placeholders = [];
+    $params = [];
+
+    foreach ($answers as $question_id => $option_value) {
+        $placeholders[] = "(cs.question_id = ? AND cs.selected_option_value = ?)";
+        $params[] = $question_id;
+        $params[] = $option_value;
+    }
+
+    $whereClause = implode(" OR ", $placeholders);
+
+    $sql = "
         SELECT c.*, SUM(cs.score_weight) as total_score
         FROM careers c
         LEFT JOIN career_scoring cs ON c.id = cs.career_id
-        WHERE cs.question_id IN (" . implode(',', array_fill(0, count($answers), '?')) . ")
-        AND cs.selected_option_value IN (" . implode(',', array_fill(0, count($answers), '?')) . ")
+        WHERE ($whereClause)
         AND c.is_active = TRUE
         GROUP BY c.id
         ORDER BY total_score DESC
-        LIMIT 5
-    ");
+        LIMIT 10
+    ";
 
-    $values = array_merge(array_keys($answers), array_values($answers));
-    $stmt->execute($values);
-    return $stmt->fetchAll();
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll() ?: [];
+}
+
+// Get recommended careers based on test answers with scoring details
+function getCareerRecommendationsWithDetails($pdo, $answers, $limit = 5)
+{
+    if (empty($answers)) {
+        return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+
+    foreach ($answers as $question_id => $option_value) {
+        $placeholders[] = "(cs.question_id = ? AND cs.selected_option_value = ?)";
+        $params[] = $question_id;
+        $params[] = $option_value;
+    }
+
+    $whereClause = implode(" OR ", $placeholders);
+
+    $sql = "
+        SELECT c.*, SUM(cs.score_weight) as total_score, COUNT(DISTINCT cs.question_id) as matched_questions
+        FROM careers c
+        LEFT JOIN career_scoring cs ON c.id = cs.career_id
+        WHERE ($whereClause)
+        AND c.is_active = TRUE
+        GROUP BY c.id
+        ORDER BY total_score DESC, matched_questions DESC
+        LIMIT ?
+    ";
+
+    $params[] = $limit;
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll() ?: [];
+}
+
+// ============================================
+// DEGREE CALCULATION AND RECOMMENDATIONS
+// ============================================
+
+// Get recommended degrees based on career selections
+function getDegreeRecommendationsByCareer($pdo, $career_ids = [], $limit = 5)
+{
+    if (empty($career_ids)) {
+        return [];
+    }
+
+    // Convert single ID to array
+    if (!is_array($career_ids)) {
+        $career_ids = [$career_ids];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($career_ids), '?'));
+
+    $sql = "
+        SELECT d.*, COUNT(DISTINCT cd.career_id) as career_match_count
+        FROM degrees d
+        LEFT JOIN career_degrees cd ON d.id = cd.degree_id
+        WHERE d.is_active = TRUE
+        AND (cd.career_id IN ($placeholders) OR cd.career_id IS NULL)
+        GROUP BY d.id
+        ORDER BY career_match_count DESC, d.name ASC
+        LIMIT ?
+    ";
+
+    $params = array_merge($career_ids, [$limit]);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll() ?: [];
+}
+
+// Get all degrees with their associated career count
+function getDegreesWithStats($pdo, $limit = null, $offset = 0)
+{
+    $sql = "
+        SELECT d.*, COUNT(DISTINCT cd.career_id) as career_count
+        FROM degrees d
+        LEFT JOIN career_degrees cd ON d.id = cd.degree_id
+        WHERE d.is_active = TRUE
+        GROUP BY d.id
+        ORDER BY d.name ASC
+    ";
+
+    if ($limit) {
+        $sql .= " LIMIT :limit OFFSET :offset";
+    }
+
+    $stmt = $pdo->prepare($sql);
+    if ($limit) {
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+    }
+    $stmt->execute();
+    return $stmt->fetchAll() ?: [];
 }
 
 // ============================================

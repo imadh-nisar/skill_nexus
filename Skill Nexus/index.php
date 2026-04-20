@@ -755,6 +755,7 @@ include __DIR__ . '/config.php';
             }
         }
     </style>
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/styles.css">
 </head>
 
 <body>

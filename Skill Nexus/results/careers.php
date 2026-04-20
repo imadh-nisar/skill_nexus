@@ -7,7 +7,20 @@ $offset = ($page - 1) * $limit;
 $careers = getAllCareers($pdo, $limit, $offset);
 $total_careers = countCareers($pdo);
 $total_pages = ceil($total_careers / $limit);
-?>
+
+// Total records in careers table
+$totalRecords = $pdo->query("SELECT COUNT(*) FROM careers")->fetchColumn();
+
+// How many items per page
+$limit = 10;
+
+// Calculate total pages
+$pages = ceil($totalRecords / $limit);
+
+// Current page from query string
+$page = $_GET['page'] ?? 1;
+$page = max(1, min($page, $pages)); // clamp between 1 and $pages
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -212,6 +225,7 @@ $total_pages = ceil($total_careers / $limit);
             }
         }
     </style>
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/styles.css">
 </head>
 
 <body>
@@ -224,9 +238,7 @@ $total_pages = ceil($total_careers / $limit);
 
     <?php if (!empty($careers)): ?>
         <div class="career-grid">
-            <?php foreach ($careers as $career):
-                $degrees = getCareerDegrees($pdo, $career['id']);
-                ?>
+            <?php foreach ($careers as $career): ?>
                 <div class="career-card">
                     <div class="career-header">
                         <div class="career-icon"><?= e($career['icon'] ?? '💼') ?></div>
@@ -311,10 +323,7 @@ $total_pages = ceil($total_careers / $limit);
         </div>
     <?php endif; ?>
 
-    <footer
-        style="background: linear-gradient(135deg, #2d3561 0%, #1a1f3a 100%); color: white; padding: 40px 20px; text-align: center; margin-top: 60px;">
-        <p style="margin: 0;">&copy; 2026 Skill NEXUS. All rights reserved.</p>
-    </footer>
+    <?php renderFooter(); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
